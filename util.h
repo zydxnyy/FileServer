@@ -150,29 +150,9 @@ struct Py_Ret {
 };
 
 
-//class PyThreadStateLock
-//{
-//public:
-//	PyThreadStateLock(void)
-//	{
-//		state = PyGILState_Ensure();
-//	}
-//
-//	~PyThreadStateLock(void)
-//	{
-//		PyGILState_Release(state);
-//	}
-//private:
-//	PyGILState_STATE state;
-//};
-
 bool json_parse(const string& s, Json::Value& v);
 
 void json_write(string &s, Json::Value& v);
-
-void* get_py_func(const string& module_name, const string& func_name);
-
-void replace_cstr(string& str, char target, char r_char);
 
 string&   replace_all_distinct(string&   str, const   string&   old_value, const   string&   new_value);
 
@@ -192,7 +172,7 @@ long long int atol(string num);
 
 int gSend(UDTSOCKET usock, const char* buf, int size, int);
 int gRecv(UDTSOCKET usock, char* buf, int size, int);
-string readFileIntoString(const char * filename);
+
 string hashFile(const char* filename);
 
 int getProjId(const string& pname);

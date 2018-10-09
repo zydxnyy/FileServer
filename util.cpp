@@ -5,12 +5,6 @@
 #include "HttpOp.h"
 using namespace std;
 
-void replace_cstr(string& str, char target, char r_char) {
-	for (int i = 0; i < str.size(); ++i) {
-		if (str[i] == target) str[i] = r_char;
-	}
-}
-
 string&   replace_all(string&   str, const   string&   old_value, const   string&   new_value)
 {
 	while (true) {
@@ -54,26 +48,6 @@ string get_file_name(const string& path) {
 	return path.substr(off);
 }
 
-//PyObject* pFunc = NULL;//全局可调用的python程序中的函数
-//PyObject *f_login, *f_all, *f_self;
-//void pFunc_init()
-//{
-//	PyRun_SimpleString("import sys");
-//	PyRun_SimpleString("sys.path.append('../../../')");
-//	PyObject* pyModule = PyImport_Import(PyString_FromString("httpops"));
-//	if (pyModule == NULL)
-//	{
-//		cout << "Load module failed" << endl;
-//		exit(0);
-//	}
-//	PyObject* pDict = PyModule_GetDict(pyModule);
-//	pFunc = PyDict_GetItemString(pDict, "check_token");
-//	f_login = PyDict_GetItemString(pDict, "verify_account");
-//	f_all = PyDict_GetItemString(pDict, "get_all_project");
-//	f_self = PyDict_GetItemString(pDict, "get_self_project");
-//
-//}
-
 bool hasSuffix(const string & src, const string & suffix)
 {
 	if (src.substr(src.size() - suffix.size()) == suffix) return true;
@@ -93,57 +67,10 @@ long long int atol(string num)
 void check_token(const string& email, const string& token, int& rtn) {
 	rtn = checkToken(email, token);
 	return;
-
-	//PyThreadStateLock PyThreadLock;
-	///**************************以下加入需要调用的python脚本代码  Begin***********************/
-
-	//PyObject* args = PyTuple_New(2);   // 2个参数
-	//PyObject* arg1 = PyString_FromString(email.c_str());
-	//PyObject* arg2 = PyString_FromString(token.c_str());
-	//PyTuple_SetItem(args, 0, arg1);
-	//PyTuple_SetItem(args, 1, arg2);
-	//PyObject *pRet;
-
-	//// 调用函数
-	//pRet = PyObject_CallObject(pFunc, args);
-	//if (pRet) {
-	//	rtn = _PyInt_AsInt(pRet);
-	//}
 }
 
 Py_Ret get_all_project(const string& email, const string& token) {
 	return getAllProject(email, token);
-
-	//PyThreadStateLock lock;
-	//Py_Ret rtn(-1, "Error", -1);
-	///**************************以下加入需要调用的python脚本代码  Begin***********************/
-	//// 加载模块
-	//PyObject *args, *arg1, *arg2, *pRet;
-	//args = PyTuple_New(2);   // 2个参数
-	//arg1 = PyString_FromString(email.c_str());
-	//arg2 = PyString_FromString(token.c_str());
-	//PyTuple_SetItem(args, 0, arg1);
-	//PyTuple_SetItem(args, 1, arg2);
-
-	//// 调用函数
-	//pRet = PyObject_CallObject(f_all, args);
-	//// 获取参数
-	//if (pRet)  // 验证是否调用成功
-	//{
-	//	char* ret_str;
-	//	int status;
-	//	//解析元组
-	//	PyArg_ParseTuple(pRet, "is", &status, &ret_str);
-	//	rtn.status = status;
-	//	rtn.str = ret_str;
-	//	// << rtn.status << " " << rtn.str.c_str() << endl;
-	//}
-	//else {
-	//	rtn.status = -1;
-	//	rtn.str = "调用失败1";
-	//}
-	///**************************以下加入需要调用的python脚本代码  End***********************/
-	//return rtn;
 }
 
 bool json_parse(const string& s, Json::Value& v) {
@@ -189,33 +116,27 @@ int gRecv(UDTSOCKET usock, char * buf, int size, int)
 	return rsize;
 }
 
-
-string readFileIntoString(const char * filename)
-{
-	string s;
-	FILE *fp = fopen(filename, "rb");
-	if (fp)
-	{
-		fseek(fp, 0, SEEK_END);
-		int len = ftell(fp);
-		//cout << "Len = " << len << endl;
-		fseek(fp, 0, SEEK_SET);
-		s.resize(len);
-		fread((void*)s.data(), 1, len, fp);
-		fclose(fp);
-	}
-	else
-	{
-		printf("fopen error\n");
-	}
-	return s;
-}
-
 string hashFile(const char* filename) {
-	cout << "Hashing " << filename << endl;
-	string fileStr = readFileIntoString(filename);
-	//cout << "fileStr : " << fileStr << " " << fileStr.size() << endl;
-	return MD5(fileStr).md5();
+	string s;
+	ifstream ifs(filename, ios::binary);
+	MD5 m;
+	if (ifs.is_open())
+	{
+		const int buffer_size = 8192;
+		char* buffer = new char[buffer_size];
+		while (ifs.read(buffer, buffer_size))
+		{
+			m.update(buffer, buffer_size);
+		}
+		int remain = ifs.gcount();
+		if (remain) {
+			m.update(buffer, remain);
+		}
+		delete[] buffer;
+	}
+	//qDebug() << "fileStr: " << s.c_str() << s.size() << endl;
+
+	return m.finalize().hexdigest();
 }
 
 int getProjId(const string & pname)

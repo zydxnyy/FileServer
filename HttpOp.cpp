@@ -30,8 +30,7 @@ Py_Ret getAllProject(string email, string token) {
 			return Py_Ret(-1, error_msg, -1);
 		}
 		else {
-			string projects = root["projects"].asString();
-			return Py_Ret(0, projects, -1);
+			return Py_Ret(0, res, -1);
 		}
 	}
 	else return Py_Ret(-1, "Json parse failed", -1);

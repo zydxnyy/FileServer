@@ -1,24 +1,28 @@
 #include "FileServer.h"
 using namespace std;
 
-const string DIR = "/home/webadmin/projects/linuxServer/";
-const string RECVDIR = "FileRecv/";
+const string ROOTDIR = "/irods/";
+const string PROTEINDIR = "protein/";
+const string DRUGDIR = "drug/";
+const string ANIMALDIR = "animal/";
 
 FileServer::FileServer()
 {
+	cout << "Starting FileServer..." << endl;
 	UDT::startup();
-	if (chdir(DIR.c_str()) == -1) {
+	if (chdir(ROOTDIR.c_str()) == -1) {
 		cout << "Change failed" << endl;
 		perror("");
 		exit(-1);
 	}
-	mkdir(RECVDIR.c_str(), S_IRWXU);
+	else {
+		cout << "change dir to " << ROOTDIR << endl;
+	}
 }
 
 
 FileServer::~FileServer()
 {
-
 	UDT::close(serv);
 
 	// use this function to release the UDT library
@@ -96,6 +100,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	int rtn; check_token(msg.email, msg.token, rtn);
 	cout << "rtn = " << rtn << endl;
 	if (rtn == -1) {
+		cout << "Server internal error" << endl;
 		rpy.error_flag = SERVER_INTERNAL_ERROR;
 		memcpy(rpy.extra, "Server Internal Error", 30);
 		rpy.op = msg.op;
@@ -103,6 +108,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		return;
 	}
 	else if (rtn != 0) {
+		cout << "TOKEN_EXPIRE" << endl;
 		rpy.error_flag = TOKEN_EXPIRE;
 		memcpy(rpy.extra, "Invalid user", 22);
 		rpy.op = msg.op;
@@ -114,34 +120,93 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 
 	//获取文件目录结构
 	if (msg.op == GETDIR) {
-		vector<Proj> projects = getProjects(msg.email, msg.token);
-		Json::Value root;
+		cout << "Getting dir" << endl;
+		vector<vector<Proj> > projects = getProjects(msg.email, msg.token);
+		Json::Value root, rrrrr;
 		//查本地文件夹中项目文件夹的文件（通过查询数据库）
-		for (int i = 0; i < projects.size(); ++i) {
-			string projname = projects.at(i).name;
+		
+		//获取Protein项目
+		for (uint i = 0; i < projects[0].size(); ++i) {
+			string projname = projects[0].at(i).name;
 			Json::Value sproj;
-			vector<myfile> files = f.queryProject(projname);
-			sproj["name"] = projects.at(i).name;
-			sproj["user"] = projects.at(i).uid;
+			vector<myfile> files = f.queryProject("Protein", getProjId(projname));
+			sproj["name"] = projects[0].at(i).name;
+			sproj["user"] = projects[0].at(i).uid;
 			Json::Value pdata;
 			pdata["data"].resize(0);
-
-			for (int j = 0; j < files.size(); ++j) {
-				if (files.at(j).state == 0) continue;
+			
+			for (uint j = 0; j < files.size(); ++j) {
+				if (files.at(j).status != 1) continue;
 				Json::Value sfile;
 				sfile["name"] = files.at(j).filename;
 				sfile["size"] = (double)files.at(j).filesize;
 				sfile["email"] = files.at(j).email;
 				sfile["created"] = (double)files.at(j).uploadtime;
-				sfile["projname"] = files.at(j).projname;
+				sfile["projname"] = getProjName(files.at(j).projId);
+				sfile["fileHash"] = files.at(j).fileHash;
+				pdata["data"].append(sfile);
+			}
+			sproj["pdata"] = pdata;
+			root.append(sproj);
+
+		}
+		rrrrr["Protein"] = root;
+		root.clear();
+		//获取Drug项目
+		for (int i = 0; i < projects[1].size(); ++i) {
+			string projname = projects[1].at(i).name;
+			Json::Value sproj;
+			vector<myfile> files = f.queryProject("Drug", getProjId(projname));
+			sproj["name"] = projects[1].at(i).name;
+			sproj["user"] = projects[1].at(i).uid;
+			Json::Value pdata;
+			pdata["data"].resize(0);
+
+			for (int j = 0; j < files.size(); ++j) {
+				if (files.at(j).status != 1) continue;
+				Json::Value sfile;
+				sfile["name"] = files.at(j).filename;
+				sfile["size"] = (double)files.at(j).filesize;
+				sfile["email"] = files.at(j).email;
+				sfile["created"] = (double)files.at(j).uploadtime;
+				sfile["projname"] = getProjName(files.at(j).projId);
 				sfile["fileHash"] = files.at(j).fileHash;
 				pdata["data"].append(sfile);
 			}
 			sproj["pdata"] = pdata;
 			root.append(sproj);
 		}
+		rrrrr["Drug"] = root;
+		root.clear();
+		//获取animal项目
+		for (int i = 0; i < projects[2].size(); ++i) {
+			string projname = projects[2].at(i).name;
+			Json::Value sproj;
+			vector<myfile> files = f.queryProject("Animal", getProjId(projname));
+			sproj["name"] = projects[2].at(i).name;
+			sproj["user"] = projects[2].at(i).uid;
+			Json::Value pdata;
+			pdata["data"].resize(0);
+
+			for (int j = 0; j < files.size(); ++j) {
+				if (files.at(j).status != 1) continue;
+				Json::Value sfile;
+				sfile["name"] = files.at(j).filename;
+				sfile["size"] = (double)files.at(j).filesize;
+				sfile["email"] = files.at(j).email;
+				sfile["created"] = (double)files.at(j).uploadtime;
+				sfile["projname"] = getProjName(files.at(j).projId);
+				sfile["fileHash"] = files.at(j).fileHash;
+				pdata["data"].append(sfile);
+			}
+			sproj["pdata"] = pdata;
+			root.append(sproj);
+		}
+		rrrrr["Animal"] = root;
+
 		string jsonProjStr;
-		json_write(jsonProjStr, root);
+		json_write(jsonProjStr, rrrrr);
+		cout << jsonProjStr << endl;
 		//cout << jsonProjStr << endl;
 		if (UDT::ERROR == gSend(fhandle, (char*)(new int(jsonProjStr.size())), sizeof(int), 0)) {
 			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
@@ -156,17 +221,20 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	else if (msg.op == UPLOAD) {
 		UDT::TRACEINFO trace;
 		//获取存储路径
-		string dir = RECVDIR + string(msg.email) + "/" + string(msg.project_name) + "/";
-		mkdir((RECVDIR).c_str(), S_IRWXU);
-		mkdir((RECVDIR + string(msg.email)).c_str(), S_IRWXU);
-		//perror("");
+		string typeDir;
+		if (string(msg.type) == "Protein") typeDir = PROTEINDIR;
+		else if (string(msg.type) == "Drug") typeDir = DRUGDIR;
+		else if (string(msg.type) == "Animal") typeDir = ANIMALDIR;
+
+		string dir = typeDir + string(msg.project_name) + "/";
+		cout << "Dir = " << dir << endl;
 		mkdir(dir.c_str(), S_IRWXU);
 		//查询上传的文件在数据库中是否有实例
-		myfile ufile = f.queryFile(msg.project_name, msg.file_name);
+		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
 		//如果文件已经存在记录
 		if (ufile.valid()) {
 			//文件已经完成，返回文件已存在错误
-			if (ufile.state == 1) {
+			if (ufile.status == 1) {
 				rpy.error_flag = FILE_EXISTS;
 				rpy.op = UPLOAD;
 				memcpy(rpy.extra, "File already exists", 20);
@@ -177,10 +245,22 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 				UDT::close(fhandle);
 				return;
 			}
+			else if (ufile.status == 2) {
+				rpy.error_flag = FILE_EXISTS;
+				rpy.op = UPLOAD;
+				memcpy(rpy.extra, "File already exists", 20);
+				if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
+					cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+					return;
+				}
+				f.update(msg.type, getProjId(msg.project_name), msg.file_name, 1, ufile.offset);
+				UDT::close(fhandle);
+				return;
+			}
 			//如果文件未完成，那么判断未完成文件是否同一文件
 			else {
 				//如果是同一文件，允许继续
-				if (msg.file_size == ufile.filesize) {
+				if (string(msg.fileHash) == ufile.fileHash) {
 					cout << "File continue;" << endl;
 				}
 				//如果是不同文件，证明同名，拒绝上传
@@ -201,7 +281,13 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		//如果文件不存在，插入文件记录
 		else {
 			cout << "Insert filerecord" << endl;
-			f.insertFile(msg.project_name, msg.file_name, msg.file_size, 0, 0, dir+string(msg.file_name), msg.email, msg.fileHash);
+			if (f.insertFile(msg.type, msg.email, msg.file_name, msg.file_size, dir + string(msg.file_name), msg.fileHash, 0, 0, getProjId(msg.project_name))) {
+				cout << "Insert done" << endl;
+			}
+			else {
+				cout << "Insert failed" << endl;
+				return;
+			}
 		}
 		// recv the file
 		int64_t offset = ufile.offset;
@@ -234,7 +320,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		if (UDT::ERROR == UDT::recvfile(fhandle, ofs, offset, size - offset)) {
 			cout << "recvfile: " << UDT::getlasterror().getErrorMessage() << " offset = " << offset << endl;
 			ofs.close();
-			f.update(msg.project_name, msg.file_name, 0, offset);
+			f.update(msg.type, getProjId(msg.project_name), msg.file_name, 0, offset);
 			return;
 		}
 		ofs.close();
@@ -244,7 +330,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 
 		//哈希校验失败，删除本地文件及数据库数据
 		if (fileHash != string(msg.fileHash)) {
-			f.deleteFile(msg.project_name, msg.file_name);
+			f.deleteFile(msg.type, getProjId(msg.project_name), msg.file_name);
 			remove((dir + string(msg.file_name) + ".ft.nc").c_str());
 			rpy.error_flag = FILE_HASH_FAULT;
 			memcpy(rpy.extra, "File hash check failed", 30);
@@ -257,7 +343,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 			return;
 		}
 		//文件上传成功，更新文件在数据库中的状态
-		f.update(msg.project_name, msg.file_name, 1, offset);
+		f.update(msg.type, getProjId(msg.project_name), msg.file_name, 1, offset);
 		rpy.error_flag = MY_NO_ERROR;
 		memcpy(rpy.extra, "File send succ", 30);
 		// send file size information
@@ -270,8 +356,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	}
 	//下载
 	else if (msg.op == DOWNLOAD) {
-		myfile ufile = f.queryFile(msg.project_name, msg.file_name);
-		if (!ufile.valid() || ufile.state == 0) {
+		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
+		if (!ufile.valid() || ufile.status == 0) {
 			cout << "File Not exists" << endl;
 			rpy.error_flag = FILE_NOT_EXISTS;
 			rpy.op = DOWNLOAD;
@@ -288,7 +374,7 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 			cout << "File = " << ufile << endl;
 		}
 		UDT::TRACEINFO trace;
-		string filepath = ufile.path;
+		string filepath = ufile.filepath;
 		// open the file
 		fstream ifs(filepath, ios::in | ios::binary);
 		cout << filepath << endl;
@@ -364,9 +450,9 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 
 	}
 	else if (msg.op == DEL) {
-		myfile ufile = f.queryFile(msg.project_name, msg.file_name);
+		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
 		//如果文件不合法
-		if (!ufile.valid() || ufile.state==0) {
+		if (!ufile.valid() || ufile.status ==0) {
 			rpy.error_flag = FILE_NOT_EXISTS;
 			rpy.op = DEL;
 			memcpy(rpy.extra, "File not exists", 20);
@@ -375,7 +461,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 			return;
 		}
 		//验证文件是否被用户拥有
-		string path = ufile.path;
+		string path = ufile.filepath;
+		cout << "DEL path = " << path << endl;
 		if (string(msg.email) != ufile.email) {
 			rpy.error_flag = USER_AUTH_FAILED;
 			rpy.op = DEL;
@@ -386,14 +473,15 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		}
 		//
 		//删除文件，删除本地文件以及数据库数据
-		if (remove(path.c_str())) {
+		if (remove(path.c_str()) != 0) {
 			rpy.error_flag = SERVER_INTERNAL_ERROR;
 			rpy.op = DEL;
 			memcpy(rpy.extra, "DELETE Failed", 20);
+			cout << "Remove failed" << endl;
 			gSend(fhandle, (char*)&rpy, sizeof(rpy), 0);
 		}
 		else {
-			f.deleteFile(msg.project_name, msg.file_name);
+			f.deleteFile(msg.type, getProjId(msg.project_name), msg.file_name);
 			rpy.error_flag = MY_NO_ERROR;
 			rpy.op = DEL;
 			memcpy(rpy.extra, "DELETE SUCCESS", 20);
@@ -405,22 +493,49 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	cout << "Done thread" << endl;
 }
 
-vector<Proj> FileServer::getProjects(const string& email, const string& token)
+vector<vector<Proj> > FileServer::getProjects(const string& email, const string& token)
 {
-	vector<Proj> v;
+	vector<Proj> proteinProjects;
+	vector<Proj> drugProjects;
+	vector<Proj> animalProjects;
+	vector<vector<Proj> > retv;
 	Py_Ret ret = get_all_project(email, token);
 	if (ret.status != 0) cout << "ERROR" << ret.str << endl;
 	else {
 		char* result = (char*)ret.str.c_str();
-		Json::Value root;
-		if (json_parse(result, root)) {
-			for (int i = 0; i < root.size(); ++i) {
+		cout << result << endl;
+		Json::Value vvv;
+		if (json_parse(result, vvv)) {
+			Json::Value root;
+			root.clear();
+			json_parse(vvv["Protein"].asCString(), root);
+			cout << root << endl;
+			for (uint i = 0; i < root.size(); ++i) {
 				Proj proj;
 				proj.name = root[i]["name"].asCString();
 				proj.uid = root[i]["user"].asInt();
-				v.push_back(proj);
+				proteinProjects.push_back(proj);
 			}
+			root.clear();
+			json_parse(vvv["Drug"].asCString(), root);
+			for (uint i = 0; i < root.size(); ++i) {
+				Proj proj;
+				proj.name = root[i]["name"].asCString();
+				proj.uid = root[i]["user"].asInt();
+				drugProjects.push_back(proj);
+			}
+			root.clear();
+			json_parse(vvv["Animal"].asCString(), root);
+			for (uint i = 0; i < root.size(); ++i) {
+				Proj proj;
+				proj.name = root[i]["name"].asCString();
+				proj.uid = root[i]["user"].asInt();
+				animalProjects.push_back(proj);
+			}
+			retv.push_back(proteinProjects);
+			retv.push_back(drugProjects);
+			retv.push_back(animalProjects);
 		}
 	}
-	return v;
+	return retv;
 }

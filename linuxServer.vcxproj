@@ -76,13 +76,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>/usr/include/</IncludePath>
-    <LibraryPath>/usr/include/src;/usr/lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>/usr/lib;/usr/include/src</SourcePath>
+    <LibraryPath>/usr/lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>/usr/lib</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>/usr/include/</IncludePath>
-    <LibraryPath>/usr/include/src;/usr/lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>/usr/lib;/usr/include/src</SourcePath>
+    <LibraryPath>/usr/lib/;$(LibraryPath)</LibraryPath>
+    <SourcePath>/usr/lib</SourcePath>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="Files.cpp" />
@@ -105,13 +105,13 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
-      <LibraryDependencies>udt;json_linux-gcc-5.4.0_libmt;%(LibraryDependencies)</LibraryDependencies>
+      <LibraryDependencies>udt;jsoncpp;%(LibraryDependencies)</LibraryDependencies>
       <AdditionalDependencies>-L/usr/lib/x86_64-linux-gnu -lmysqlclient -lpthread -lz -lm -lrt -ldl;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
-      <LibraryDependencies>udt;json_linux-gcc-5.4.0_libmt;%(LibraryDependencies)</LibraryDependencies>
+      <LibraryDependencies>jsoncpp;udt;%(LibraryDependencies)</LibraryDependencies>
       <AdditionalDependencies>-L/usr/lib/x86_64-linux-gnu -lmysqlclient -lpthread -lz -lm -lrt -ldl;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

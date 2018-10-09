@@ -8,13 +8,12 @@
 #include <iostream>
 #include <string.h>
 #include <vector>
-#include <src/udt.h>
 #include <vector>
 #include <thread>
-#include <python2.7/Python.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <src/udt.h>
 #include <json/json.h>
 #include "util.h"
 #include "Files.h"
@@ -30,7 +29,7 @@ public:
 	void work_thread(UDTSOCKET);
 
 protected:
-	vector<Proj> getProjects(const string& email, const string& token);
+	vector<vector<Proj> > getProjects(const string& email, const string& token);
 
 private:
 	UDTSOCKET serv;

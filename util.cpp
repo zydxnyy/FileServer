@@ -217,3 +217,30 @@ string hashFile(const char* filename) {
 	//cout << "fileStr : " << fileStr << " " << fileStr.size() << endl;
 	return MD5(fileStr).md5();
 }
+
+int getProjId(const string & pname)
+{
+	int pos = pname.find('_');
+	if (pos == -1) return atol(pname.c_str());
+	else return atol(pname.substr(pos + 1).c_str());
+}
+
+string getProjName(int pid)
+{
+	string ret = "Proj_" + itoa(pid);
+	return ret;
+}
+
+string itoa(int num)
+{
+	string n;
+	while (num) {
+		n += (num % 10) + '0';
+		num /= 10;
+	}
+	string ret(n);
+	for (int i = 0; i < n.size(); ++i) {
+		ret[i] = n[n.size() - 1 - i];
+	}
+	return ret;
+}

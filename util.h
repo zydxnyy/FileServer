@@ -7,11 +7,13 @@
 #include <stdio.h>
 #include <json/json.h>
 #include <functional>
+#include <stdlib.h>
 #include <src/udt.h>
 #include "md5.h"
 using namespace std;
 
 #define SERVER_IP "10.132.100.180"
+//#define SERVER_IP "192.168.135.131"
 #define SERVER_PORT "9091"
 
 #define ZERO(x) {memset((x), 0, sizeof(x));}
@@ -70,23 +72,25 @@ struct FileRequest {
 	char op;
 	char email[50];
 	char token[50];
+	char type[50];
 	char project_name[50];
-	char file_name[50];
+	char file_name[100];
 	size_t file_size;
 	size_t offset;
 	char fileHash[130];
 	FileRequest() {
-		ZERO(this->email); ZERO(this->token); ZERO(this->project_name); ZERO(this->file_name);
+		ZERO(this->email); ZERO(this->token); ZERO(this->project_name); ZERO(this->file_name); ZERO(this->type);
 	}
-	FileRequest(char op, const char* email, const char* token, const char* project_name, const char* file_name, size_t file_size, char* fileHash = 0, size_t offset = 0) {
+	FileRequest(char op, const char* email, const char* token, const char* type, const char* project_name, const char* file_name, size_t file_size, char* fileHash = 0, size_t offset = 0) {
 		this->op = op;
 		this->file_size = file_size;
 		this->offset = offset;
 		memset((char*)fileHash, 0, sizeof(fileHash));
 		if (fileHash != NULL) memcpy(this->fileHash, fileHash, sizeof(fileHash));
-		ZERO(this->email); ZERO(this->token); ZERO(this->project_name); ZERO(this->file_name);
+		ZERO(this->email); ZERO(this->token); ZERO(this->project_name); ZERO(this->file_name); ZERO(this->type);
 		memcpy(this->email, email, strlen(email));
 		memcpy(this->token, token, strlen(token));
+		memcpy(this->type, type, strlen(type));
 		memcpy(this->project_name, project_name, strlen(project_name));
 		memcpy(this->file_name, file_name, strlen(file_name));
 	}
@@ -191,5 +195,8 @@ int gRecv(UDTSOCKET usock, char* buf, int size, int);
 string readFileIntoString(const char * filename);
 string hashFile(const char* filename);
 
+int getProjId(const string& pname);
+string getProjName(int pid);
+string itoa(int num);
 
 Py_Ret get_all_project(const string& email, const string& token);

@@ -14,7 +14,10 @@ int main()
 	//PyEval_InitThreads();
 	//pFunc_init();
 	//PyEval_ReleaseThread(PyThreadState_Get());
+	cout << "--- FileServer ---" << endl;
+		 
 	FileServer s;
+
 	s.start();
 
 	//PyGILState_Ensure();

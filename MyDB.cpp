@@ -29,6 +29,7 @@ bool MyDB::initDB(string host, string user, string pwd, string db_name) {
 		cout << "Error:" << mysql_error(connection);
 		exit(1);
 	}
+	if (!execSQL("SET NAMES 'utf8';")) cout << "Set utf8 failed" << endl;
 	return true;
 }
 

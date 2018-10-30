@@ -8,16 +8,31 @@ const string ANIMALDIR = "animal/";
 
 FileServer::FileServer()
 {
-	cout << "Starting FileServer..." << endl;
+	logger = Logger::getLogger();
+	logger->log("Starting FileServer...", INFO);
 	UDT::startup();
 	if (chdir(ROOTDIR.c_str()) == -1) {
-		cout << "Change failed" << endl;
+		logger->log("Failed to change directory", ERROR);
 		perror("");
 		exit(-1);
 	}
 	else {
-		cout << "change dir to " << ROOTDIR << endl;
+		logger->log("FileServer Started...", INFO); 
+		char   buffer[1024];
+		getcwd(buffer, 1024);
+		logger->log(buffer, INFO);
 	}
+}
+
+char* mstrcat(int n, char* dest, ...) {
+	va_list args;
+	va_start(args, n);
+	while (n > 0) {    //通过va_arg(args,int)依次获取参数的值
+		strcat(dest, va_arg(args,char*));
+		n--;
+	}
+	va_end(args);
+	return dest;
 }
 
 
@@ -27,6 +42,9 @@ FileServer::~FileServer()
 
 	// use this function to release the UDT library
 	UDT::cleanup();
+
+	logger->log("Shutdown...", INFO);
+	delete logger;
 }
 
 bool FileServer::start()
@@ -41,8 +59,11 @@ bool FileServer::start()
 
 	string service("5566");
 
+	logger->log("Listening to port 5566", INFO);
+
 	if (0 != getaddrinfo(NULL, service.c_str(), &hints, &res)) {
 		cout << "illegal port number or port is busy.\n" << endl;
+		logger->log("PORT is busy", ERROR);
 		return false;
 	}
 
@@ -50,16 +71,19 @@ bool FileServer::start()
 
 	if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen)) {
 		cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
+		logger->log("Bind Failed", ERROR);
 		return false;
 	}
 
 	freeaddrinfo(res);
 
 	cout << "server is ready at port: " << service << endl;
+	logger->log("Server is ready at port 5566", INFO);
 
 	if (UDT::ERROR == UDT::listen(serv, SOMAXCONN))
 	{
 		cout << "listen: " << UDT::getlasterror().getErrorMessage() << endl;
+		logger->log("Failed to listen", ERROR);
 		return 0;
 	}
 
@@ -71,6 +95,7 @@ bool FileServer::start()
 		UDTSOCKET fhandle;
 		if (UDT::INVALID_SOCK == (fhandle = UDT::accept(serv, (sockaddr*)&clientaddr, &addrlen))) {
 			cout << "accept: " << UDT::getlasterror().getErrorMessage() << endl;
+			logger->log("Accept A invalid socket", WARN);
 			return false;
 		}
 		int timeout = 10000;
@@ -81,26 +106,36 @@ bool FileServer::start()
 		getnameinfo((sockaddr *)&clientaddr, addrlen, clienthost, sizeof(clienthost), clientservice, sizeof(clientservice), NI_NUMERICHOST | NI_NUMERICSERV);
 		cout << "new connection: " << clienthost << ":" << clientservice << endl;
 
-		std::thread t{ &FileServer::work_thread, this, fhandle };
+		//logger->log("New connection:" + clienthost + ":" + clientservice, INFO);
+		//logger->log(mstrcat(3, "New connection", clienthost, ":", clientservice), INFO);
+
+		std::thread t{ &FileServer::work_thread, this, fhandle, string(clienthost), string(clientservice) };
 		t.detach();
 	}
+	logger->log("Out While", WARN);
 
 	return true;
 }
 
-void FileServer::work_thread(UDTSOCKET fhandle) {
+void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string clientservice) {
+	string addr = "<" + clienthost + ":" + clientservice + ">";
+	char log_buf[1024];
 	FileRequest msg;
 	FileReply rpy;
 	//接收操作
 	if (UDT::ERROR == gRecv(fhandle, (char*)&msg, sizeof(msg), 0)) {
 		cout << "recv: " << UDT::getlasterror().getErrorMessage() << endl;
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(3, log_buf, addr.c_str(), "recv:", UDT::getlasterror().getErrorMessage()), ERROR);
 		return;
 	}
 
 	int rtn; check_token(msg.email, msg.token, rtn);
-	cout << "rtn = " << rtn << endl;
+
 	if (rtn == -1) {
 		cout << "Server internal error" << endl;
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(2, log_buf, addr.c_str(), "Server Internal Error:"), ERROR);
 		rpy.error_flag = SERVER_INTERNAL_ERROR;
 		memcpy(rpy.extra, "Server Internal Error", 30);
 		rpy.op = msg.op;
@@ -120,6 +155,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 
 	//获取文件目录结构
 	if (msg.op == GETDIR) {
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(2, log_buf, addr.c_str(), " Getting Directory"), INFO);
 		cout << "Getting dir" << endl;
 		vector<vector<Proj> > projects = getProjects(msg.email, msg.token);
 		Json::Value root, rrrrr;
@@ -209,16 +246,22 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		cout << jsonProjStr << endl;
 		//cout << jsonProjStr << endl;
 		if (UDT::ERROR == gSend(fhandle, (char*)(new int(jsonProjStr.size())), sizeof(int), 0)) {
+			memset(log_buf, 0, sizeof(log_buf));
+			logger->log(mstrcat(2, log_buf, addr.c_str(), " Send json len failed."), INFO);
 			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 		if (UDT::ERROR == gSend(fhandle, jsonProjStr.c_str(), jsonProjStr.size(), 0)) {
+			memset(log_buf, 0, sizeof(log_buf));
+			logger->log(mstrcat(2, log_buf, addr.c_str(), " Send json failed."), INFO);
 			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 	}
 	//上传
 	else if (msg.op == UPLOAD) {
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(2, log_buf, addr.c_str(), "Uploading File"), INFO);
 		UDT::TRACEINFO trace;
 		//获取存储路径
 		string typeDir;
@@ -295,6 +338,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		fstream ofs(dir + string(msg.file_name) + ".ft.nc", ios::out | ios::binary | ios::app);
 		if (!ofs.is_open()) {
 			cout << "Can't open " << dir + string(msg.file_name) + ".ft.nc" << endl;
+			memset(log_buf, 0, sizeof(log_buf));
+			logger->log(mstrcat(2, log_buf, addr.c_str(), " File open failed."), INFO);
 			rpy.op = UPLOAD;
 			rpy.error_flag = SERVER_INTERNAL_ERROR;
 			memcpy(rpy.extra, "File open failed", 20);
@@ -356,12 +401,16 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	}
 	//下载
 	else if (msg.op == DOWNLOAD) {
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(2, log_buf, addr.c_str(), "Downloading File"), INFO);
 		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
 		if (!ufile.valid() || ufile.status == 0) {
 			cout << "File Not exists" << endl;
 			rpy.error_flag = FILE_NOT_EXISTS;
 			rpy.op = DOWNLOAD;
-			memcpy(rpy.extra, "File not exists", 20);
+			memcpy(rpy.extra, "File not exists1", 20);
+			memset(log_buf, 0, sizeof(log_buf));
+			logger->log(mstrcat(2, log_buf, addr.c_str(), " File not exists1."), INFO);
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
 				cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 				return;
@@ -381,7 +430,9 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 		if (!ifs) {
 			rpy.op = DOWNLOAD;
 			rpy.error_flag = FILE_NOT_EXISTS;
-			memcpy(rpy.extra, "File not exists", 20);
+			memcpy(rpy.extra, "File not exists2", 20);
+			memset(log_buf, 0, sizeof(log_buf));
+			logger->log(mstrcat(2, log_buf, addr.c_str(), " File not exists2."), INFO);
 			// send file size information
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
 				cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
@@ -450,6 +501,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 
 	}
 	else if (msg.op == DEL) {
+		memset(log_buf, 0, sizeof(log_buf));
+		logger->log(mstrcat(2, log_buf, addr.c_str(), "Deleting File"), INFO);
 		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
 		//如果文件不合法
 		if (!ufile.valid() || ufile.status ==0) {
@@ -491,6 +544,8 @@ void FileServer::work_thread(UDTSOCKET fhandle) {
 	///////////////////////////
 	UDT::close(fhandle);
 	cout << "Done thread" << endl;
+	memset(log_buf, 0, sizeof(log_buf));
+	logger->log(mstrcat(2, log_buf, addr.c_str(), "Exit"), INFO);
 }
 
 vector<vector<Proj> > FileServer::getProjects(const string& email, const string& token)

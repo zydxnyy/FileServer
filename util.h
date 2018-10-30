@@ -128,6 +128,7 @@ struct File {
 struct Proj {
 	string name;
 	int uid;
+	bool published;
 	File_Container files;
 	Proj(){}
 	Proj(const Proj& ano) {

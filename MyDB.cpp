@@ -1,6 +1,7 @@
 #include "MyDB.h"
 
 MyDB::MyDB() {
+	logger = Logger::getLogger();
 	connection = mysql_init(NULL); // 初始化数据库连接变量
 	result = nullptr;
 	if (connection == NULL)
@@ -22,14 +23,20 @@ MyDB::~MyDB() {
 bool MyDB::initDB(string host, string user, string pwd, string db_name) {
 	// 函数mysql_real_connect建立一个数据库连接
 	// 成功返回MYSQL*连接句柄，失败返回NULL
+	char value = 1;
+	mysql_options(connection, MYSQL_OPT_RECONNECT, (char *)&value);
 	connection = mysql_real_connect(connection, host.c_str(),
 		user.c_str(), pwd.c_str(), db_name.c_str(), 0, NULL, 0);
 	if (connection == NULL)
 	{
 		cout << "Error:" << mysql_error(connection);
+		logger->log(mysql_error(connection), ERROR);
 		exit(1);
 	}
-	if (!execSQL("SET NAMES 'utf8';")) cout << "Set utf8 failed" << endl;
+	if (!execSQL("SET NAMES 'utf8';")) {
+		cout << "Set utf8 failed" << endl;
+		logger->log("Set utf8 failed", ERROR);
+	}
 	return true;
 }
 
@@ -38,6 +45,7 @@ bool MyDB::execSQL(string sql) {
 	if (mysql_query(connection, sql.c_str()))
 	{
 		cout << "Query Error:" << mysql_error(connection);
+		logger->log(mysql_error(connection), ERROR);
 		return false;
 	}
 	else
@@ -52,6 +60,7 @@ MYSQL_RES* MyDB::querySQL(string sql) {
 	if (mysql_query(connection, sql.c_str()))
 	{
 		cout << "Query Error:" << mysql_error(connection);
+		logger->log(mysql_error(connection), ERROR);
 		return nullptr;
 	}
 	else

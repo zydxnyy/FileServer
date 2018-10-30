@@ -14,9 +14,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <src/udt.h>
+#include <stdlib.h>
+#include  <stdio.h> 
 #include <json/json.h>
 #include "util.h"
 #include "Files.h"
+#include "Logger.h"
 
 class FileServer
 {
@@ -26,7 +29,7 @@ public:
 
 	bool start();
 
-	void work_thread(UDTSOCKET);
+	void work_thread(UDTSOCKET, string, string);
 
 protected:
 	vector<vector<Proj> > getProjects(const string& email, const string& token);
@@ -34,5 +37,6 @@ protected:
 private:
 	UDTSOCKET serv;
 	Files f;
+	Logger* logger;
 };
 

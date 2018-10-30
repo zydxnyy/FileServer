@@ -1,6 +1,7 @@
 #include "Files.h"
 #include <time.h>
 //string host = "localhost", user = "root", pwd = "zhf123456", db_name = "MFTP";
+const int MAX_SQL_LEN = 1024;
 
 Files::Files()
 {
@@ -22,16 +23,16 @@ bool Files::insertFile(string type, string email, string filename, size_t filesi
 		cout << "Filename is empty" << endl;
 		return false;
 	}
-	char sql[500];
+	char sql[MAX_SQL_LEN];
 	sprintf(sql, "insert into dms_files (type, email, filename, filesize, created,filepath, fileHash, status, offset, projname_id) \
 	values('%s', '%s', '%s', %lld, %lld, '%s', '%s', %d, %lld, %d);", type.c_str(), email.c_str(), filename.c_str(),
 		filesize, uploadtime, path.c_str(), fileHash.c_str(), status, offset, projId);
-	cout << "Sql = " << sql << endl;
+	//cout << "Sql = " << sql << endl;
 	return db.execSQL(sql);
 }
 
 bool Files::deleteFile(string type, int projId, string filename) {
-	char sql[500];
+	char sql[MAX_SQL_LEN];
 	sprintf(sql, "delete from dms_files where type = '%s' and projname_id = %d and filename = '%s'", type.c_str(), projId, filename.c_str());
 	return db.execSQL(sql);
 }
@@ -39,7 +40,7 @@ bool Files::deleteFile(string type, int projId, string filename) {
 bool Files::update(string type, int projId, string filename, int state, size_t offset)
 {
 	if (filename.empty()) return false;
-	char sql[500];
+	char sql[MAX_SQL_LEN];
 	sprintf(sql, "update dms_files set status=%d, offset=%lld, created=%lld where type='%s' and projname_id = %d and filename='%s';", state, offset, time(NULL), type.c_str(), projId, filename.c_str());
 	//cout << "SQl = " << sql << endl;
 	return db.execSQL(sql);
@@ -48,7 +49,7 @@ bool Files::update(string type, int projId, string filename, int state, size_t o
 vector<myfile> Files::queryAll() {
 	vector<myfile> vFile;
 	vFile.clear();
-	char sql[100] = "select * from dms_files where status = 1;";
+	char sql[MAX_SQL_LEN] = "select * from dms_files where status = 1;";
 	MYSQL_RES* result = db.querySQL(sql);
 	if (!result) return vFile;
 	for (int i = 0; i < mysql_num_rows(result); ++i)
@@ -67,7 +68,7 @@ vector<myfile> Files::queryAll() {
 }
 
 myfile Files::queryFile(string type, int projId, string filename) {
-	char sql[500];
+	char sql[MAX_SQL_LEN];
 	sprintf(sql, "select * from dms_files where type='%s' and projname_id = %d and filename='%s';", type.c_str(), projId, filename.c_str());
 	MYSQL_RES* result = db.querySQL(sql);
 	if (!result) {
@@ -92,7 +93,7 @@ vector<myfile> Files::queryProject(string type, int projId)
 {
 	vector<myfile> vFile;
 	vFile.clear();
-	char sql[500];
+	char sql[MAX_SQL_LEN];
 	sprintf(sql, "select * from dms_files where type='%s' and projname_id = %d;", type.c_str(), projId);
 	MYSQL_RES* result = db.querySQL(sql);
 	if (!result) return vFile;

@@ -1,6 +1,7 @@
 #pragma once
 #include<iostream>
 #include<mysql/mysql.h>
+#include "Logger.h"
 using namespace std;
 
 class MyDB
@@ -16,4 +17,5 @@ private:
 	MYSQL *connection;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
+	Logger* logger;
 };

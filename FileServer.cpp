@@ -62,7 +62,7 @@ bool FileServer::start()
 	logger->log("Listening to port 5566", INFO);
 
 	if (0 != getaddrinfo(NULL, service.c_str(), &hints, &res)) {
-		cout << "illegal port number or port is busy.\n" << endl;
+		Trace << "illegal port number or port is busy.\n" << endl;
 		logger->log("PORT is busy", ERROR);
 		return false;
 	}
@@ -70,19 +70,19 @@ bool FileServer::start()
 	serv = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
 	if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen)) {
-		cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
+		Trace << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
 		logger->log("Bind Failed", ERROR);
 		return false;
 	}
 
 	freeaddrinfo(res);
 
-	cout << "server is ready at port: " << service << endl;
+	Trace << "server is ready at port: " << service << endl;
 	logger->log("Server is ready at port 5566", INFO);
 
 	if (UDT::ERROR == UDT::listen(serv, SOMAXCONN))
 	{
-		cout << "listen: " << UDT::getlasterror().getErrorMessage() << endl;
+		Trace << "listen: " << UDT::getlasterror().getErrorMessage() << endl;
 		logger->log("Failed to listen", ERROR);
 		return 0;
 	}
@@ -94,7 +94,7 @@ bool FileServer::start()
 	while (true) {
 		UDTSOCKET fhandle;
 		if (UDT::INVALID_SOCK == (fhandle = UDT::accept(serv, (sockaddr*)&clientaddr, &addrlen))) {
-			cout << "accept: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "accept: " << UDT::getlasterror().getErrorMessage() << endl;
 			logger->log("Accept A invalid socket", WARN);
 			return false;
 		}
@@ -104,7 +104,7 @@ bool FileServer::start()
 		char clienthost[NI_MAXHOST];
 		char clientservice[NI_MAXSERV];
 		getnameinfo((sockaddr *)&clientaddr, addrlen, clienthost, sizeof(clienthost), clientservice, sizeof(clientservice), NI_NUMERICHOST | NI_NUMERICSERV);
-		cout << "new connection: " << clienthost << ":" << clientservice << endl;
+		Trace << "new connection: " << clienthost << ":" << clientservice << endl;
 
 		//logger->log("New connection:" + clienthost + ":" + clientservice, INFO);
 		//logger->log(mstrcat(3, "New connection", clienthost, ":", clientservice), INFO);
@@ -124,7 +124,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 	FileReply rpy;
 	//接收操作
 	if (UDT::ERROR == gRecv(fhandle, (char*)&msg, sizeof(msg), 0)) {
-		cout << "recv: " << UDT::getlasterror().getErrorMessage() << endl;
+		Trace << "recv: " << UDT::getlasterror().getErrorMessage() << endl;
 		memset(log_buf, 0, sizeof(log_buf));
 		logger->log(mstrcat(3, log_buf, addr.c_str(), "recv:", UDT::getlasterror().getErrorMessage()), ERROR);
 		return;
@@ -133,7 +133,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 	int rtn; check_token(msg.email, msg.token, rtn);
 
 	if (rtn == -1) {
-		cout << "Server internal error" << endl;
+		Trace << "Server internal error" << endl;
 		memset(log_buf, 0, sizeof(log_buf));
 		logger->log(mstrcat(2, log_buf, addr.c_str(), "Server Internal Error:"), ERROR);
 		rpy.error_flag = SERVER_INTERNAL_ERROR;
@@ -143,7 +143,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		return;
 	}
 	else if (rtn != 0) {
-		cout << "TOKEN_EXPIRE" << endl;
+		Trace << "TOKEN_EXPIRE" << endl;
 		rpy.error_flag = TOKEN_EXPIRE;
 		memcpy(rpy.extra, "Invalid user", 22);
 		rpy.op = msg.op;
@@ -151,13 +151,13 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		return;
 	}
 
-	cout << "ID verified" << endl;
+	Trace << "ID verified" << endl;
 
 	//获取文件目录结构
 	if (msg.op == GETDIR) {
 		memset(log_buf, 0, sizeof(log_buf));
 		logger->log(mstrcat(2, log_buf, addr.c_str(), " Getting Directory"), INFO);
-		cout << "Getting dir" << endl;
+		Trace << "Getting dir" << endl;
 		vector<vector<Proj> > projects = getProjects(msg.email, msg.token);
 		Json::Value root, rrrrr;
 		//查本地文件夹中项目文件夹的文件（通过查询数据库）
@@ -243,18 +243,18 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 
 		string jsonProjStr;
 		json_write(jsonProjStr, rrrrr);
-		cout << jsonProjStr << endl;
-		//cout << jsonProjStr << endl;
+		Trace << jsonProjStr << endl;
+		//Trace << jsonProjStr << endl;
 		if (UDT::ERROR == gSend(fhandle, (char*)(new int(jsonProjStr.size())), sizeof(int), 0)) {
 			memset(log_buf, 0, sizeof(log_buf));
 			logger->log(mstrcat(2, log_buf, addr.c_str(), " Send json len failed."), INFO);
-			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 		if (UDT::ERROR == gSend(fhandle, jsonProjStr.c_str(), jsonProjStr.size(), 0)) {
 			memset(log_buf, 0, sizeof(log_buf));
 			logger->log(mstrcat(2, log_buf, addr.c_str(), " Send json failed."), INFO);
-			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 	}
@@ -262,7 +262,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 	else if (msg.op == UPLOAD) {
 		memset(log_buf, 0, sizeof(log_buf));
 		logger->log(mstrcat(2, log_buf, addr.c_str(), "Uploading File"), INFO);
-		UDT::TRACEINFO trace;
+		UDT::TRACEINFO tinfo;
 		//获取存储路径
 		string typeDir;
 		if (string(msg.type) == "Protein") typeDir = PROTEINDIR;
@@ -270,7 +270,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		else if (string(msg.type) == "Animal") typeDir = ANIMALDIR;
 
 		string dir = typeDir + string(msg.project_name) + "/";
-		cout << "Dir = " << dir << endl;
+		Trace << "Dir = " << dir << endl;
 		mkdir(dir.c_str(), S_IRWXU);
 		//查询上传的文件在数据库中是否有实例
 		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
@@ -282,7 +282,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 				rpy.op = UPLOAD;
 				memcpy(rpy.extra, "File already exists", 20);
 				if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-					cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+					Trace << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 					return;
 				}
 				UDT::close(fhandle);
@@ -293,7 +293,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 				rpy.op = UPLOAD;
 				memcpy(rpy.extra, "File already exists", 20);
 				if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-					cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+					Trace << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 					return;
 				}
 				f.update(msg.type, getProjId(msg.project_name), msg.file_name, 1, ufile.offset);
@@ -304,16 +304,16 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			else {
 				//如果是同一文件，允许继续
 				if (string(msg.fileHash) == ufile.fileHash) {
-					cout << "File continue;" << endl;
+					Trace << "File continue;" << endl;
 				}
 				//如果是不同文件，证明同名，拒绝上传
 				else {
-					cout << "File exists same name;" << endl;
+					Trace << "File exists same name;" << endl;
 					rpy.error_flag = FILE_NAME_DULPLICTAION;
 					rpy.op = UPLOAD;
 					memcpy(rpy.extra, "File already exists", 20);
 					if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-						cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+						Trace << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 						return;
 					}
 					UDT::close(fhandle);
@@ -323,21 +323,21 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		}
 		//如果文件不存在，插入文件记录
 		else {
-			cout << "Insert filerecord" << endl;
+			Trace << "Insert filerecord" << endl;
 			if (f.insertFile(msg.type, msg.email, msg.file_name, msg.file_size, dir + string(msg.file_name), msg.fileHash, 0, 0, getProjId(msg.project_name))) {
-				cout << "Insert done" << endl;
+				Trace << "Insert done" << endl;
 			}
 			else {
-				cout << "Insert failed" << endl;
+				Trace << "Insert failed" << endl;
 				return;
 			}
 		}
 		// recv the file
 		int64_t offset = ufile.offset;
-		cout << dir + string(msg.file_name) + ".ft.nc" << endl;
+		Trace << dir + string(msg.file_name) + ".ft.nc" << endl;
 		fstream ofs(dir + string(msg.file_name) + ".ft.nc", ios::out | ios::binary | ios::app);
 		if (!ofs.is_open()) {
-			cout << "Can't open " << dir + string(msg.file_name) + ".ft.nc" << endl;
+			Trace << "Can't open " << dir + string(msg.file_name) + ".ft.nc" << endl;
 			memset(log_buf, 0, sizeof(log_buf));
 			logger->log(mstrcat(2, log_buf, addr.c_str(), " File open failed."), INFO);
 			rpy.op = UPLOAD;
@@ -345,25 +345,25 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			memcpy(rpy.extra, "File open failed", 20);
 			// send file size information
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-				cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+				Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 				return;
 			}
 			UDT::close(fhandle);
 			return;
 		}
 		int64_t size = msg.file_size;
-		UDT::perfmon(fhandle, &trace);
+		UDT::perfmon(fhandle, &tinfo);
 
-		cout << msg.file_name << " " << msg.file_size << " " << offset << endl;
+		Trace << msg.file_name << " " << msg.file_size << " " << offset << endl;
 
 		//允许上传
 		rpy.op = UPLOAD; rpy.offset = offset;
 		if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-			cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 		if (UDT::ERROR == UDT::recvfile(fhandle, ofs, offset, size - offset)) {
-			cout << "recvfile: " << UDT::getlasterror().getErrorMessage() << " offset = " << offset << endl;
+			Trace << "recvfile: " << UDT::getlasterror().getErrorMessage() << " offset = " << offset << endl;
 			ofs.close();
 			f.update(msg.type, getProjId(msg.project_name), msg.file_name, 0, offset);
 			return;
@@ -371,7 +371,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		ofs.close();
 		rename((dir + string(msg.file_name) + ".ft.nc").c_str(), (dir + string(msg.file_name)).c_str());
 		string fileHash = hashFile((dir + string(msg.file_name)).c_str());
-		cout << "Hash = " << fileHash << " " << " uploadHash = " << msg.fileHash << endl;
+		Trace << "Hash = " << fileHash << " " << " uploadHash = " << msg.fileHash << endl;
 
 		//哈希校验失败，删除本地文件及数据库数据
 		if (fileHash != string(msg.fileHash)) {
@@ -381,7 +381,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			memcpy(rpy.extra, "File hash check failed", 30);
 			// send file size information
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-				cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+				Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 				return;
 			}
 			UDT::close(fhandle);
@@ -393,11 +393,11 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		memcpy(rpy.extra, "File send succ", 30);
 		// send file size information
 		if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-			cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
-		UDT::perfmon(fhandle, &trace);
-		cout << "speed = " << trace.mbpsRecvRate << "Mbits/sec" << " offset = " << offset << endl;
+		UDT::perfmon(fhandle, &tinfo);
+		Trace << "speed = " << tinfo.mbpsRecvRate << "Mbits/sec" << " offset = " << offset << endl;
 	}
 	//下载
 	else if (msg.op == DOWNLOAD) {
@@ -405,28 +405,28 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		logger->log(mstrcat(2, log_buf, addr.c_str(), "Downloading File"), INFO);
 		myfile ufile = f.queryFile(msg.type, getProjId(msg.project_name), msg.file_name);
 		if (!ufile.valid() || ufile.status == 0) {
-			cout << "File Not exists" << endl;
+			Trace << "File Not exists" << endl;
 			rpy.error_flag = FILE_NOT_EXISTS;
 			rpy.op = DOWNLOAD;
 			memcpy(rpy.extra, "File not exists1", 20);
 			memset(log_buf, 0, sizeof(log_buf));
 			logger->log(mstrcat(2, log_buf, addr.c_str(), " File not exists1."), INFO);
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-				cout << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
+				Trace << "sendmsg: " << UDT::getlasterror().getErrorMessage() << endl;
 				return;
 			}
 			UDT::close(fhandle);
 			return;
 		}
 		else {
-			cout << "File exists, allow to download " << endl;
-			cout << "File = " << ufile << endl;
+			Trace << "File exists, allow to download " << endl;
+			Trace << "File = " << ufile << endl;
 		}
-		UDT::TRACEINFO trace;
+		UDT::TRACEINFO tinfo;
 		string filepath = ufile.filepath;
 		// open the file
 		fstream ifs(filepath, ios::in | ios::binary);
-		cout << filepath << endl;
+		Trace << filepath << endl;
 		if (!ifs) {
 			rpy.op = DOWNLOAD;
 			rpy.error_flag = FILE_NOT_EXISTS;
@@ -435,11 +435,11 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			logger->log(mstrcat(2, log_buf, addr.c_str(), " File not exists2."), INFO);
 			// send file size information
 			if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-				cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
+				Trace << "send: " << UDT::getlasterror().getErrorMessage() << endl;
 				return;
 			}
 			UDT::close(fhandle);
-			cout << "File open failed" << endl;
+			Trace << "File open failed" << endl;
 			return;
 		}
 		ifs.seekg(0, ios::end);
@@ -449,14 +449,14 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		rpy.op = DOWNLOAD;
 		rpy.file_size = size;
 		rpy.offset = 0;
-		cout << "File hash = " << rpy.fileHash << endl;
+		Trace << "File hash = " << rpy.fileHash << endl;
 		// send file size information
 		if (UDT::ERROR == gSend(fhandle, (char*)&rpy, sizeof(rpy), 0)) {
-			cout << "sendRpy: " << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "sendRpy: " << UDT::getlasterror().getErrorMessage() << endl;
 			return;
 		}
 
-		UDT::perfmon(fhandle, &trace);
+		UDT::perfmon(fhandle, &tinfo);
 
 		// send the file
 		char buffer[CHUNK_SIZE];
@@ -466,7 +466,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		//if (UDT::ERROR == UDT::sendfile(fhandle, ifs, offset, remainSize)) {
 		//	UDT::close(fhandle);
 		//	ifs.close();
-		//	cout << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
+		//	Trace << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
 		//	return;
 		//}
 		int ret;
@@ -476,7 +476,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 				if (UDT::ERROR == (ret = gSend(fhandle, buffer, CHUNK_SIZE, 0))) {
 					UDT::close(fhandle);
 					ifs.close();
-					cout << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
+					Trace << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
 					return;
 				}
 				offset += CHUNK_SIZE;
@@ -487,17 +487,17 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 				if (UDT::ERROR == (ret = gSend(fhandle, buffer, remainSize, 0))) {
 					UDT::close(fhandle);
 					ifs.close();
-					cout << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
+					Trace << "sendfile: " << UDT::getlasterror().getErrorMessage() << endl;
 					return;
 				}
 				offset += remainSize;
 				remainSize -= remainSize;
 			}
-			//cout << remainSize << " ret = " << ret << endl;
+			//Trace << remainSize << " ret = " << ret << endl;
 		}
 		ifs.close();
-		UDT::perfmon(fhandle, &trace);
-		cout << "speed = " << trace.mbpsSendRate / 8 << "MBs/sec" << endl;
+		UDT::perfmon(fhandle, &tinfo);
+		Trace << "speed = " << tinfo.mbpsSendRate / 8 << "MBs/sec" << endl;
 
 	}
 	else if (msg.op == DEL) {
@@ -515,7 +515,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		}
 		//验证文件是否被用户拥有
 		string path = ufile.filepath;
-		cout << "DEL path = " << path << endl;
+		Trace << "DEL path = " << path << endl;
 		if (string(msg.email) != ufile.email) {
 			rpy.error_flag = USER_AUTH_FAILED;
 			rpy.op = DEL;
@@ -530,7 +530,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			rpy.error_flag = SERVER_INTERNAL_ERROR;
 			rpy.op = DEL;
 			memcpy(rpy.extra, "DELETE Failed", 20);
-			cout << "Remove failed" << endl;
+			Trace << "Remove failed" << endl;
 			gSend(fhandle, (char*)&rpy, sizeof(rpy), 0);
 		}
 		else {
@@ -543,7 +543,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 	}
 	///////////////////////////
 	UDT::close(fhandle);
-	cout << "Done thread" << endl;
+	Trace << "Done thread" << endl;
 	memset(log_buf, 0, sizeof(log_buf));
 	logger->log(mstrcat(2, log_buf, addr.c_str(), "Exit"), INFO);
 }
@@ -555,16 +555,16 @@ vector<vector<Proj> > FileServer::getProjects(const string& email, const string&
 	vector<Proj> animalProjects;
 	vector<vector<Proj> > retv;
 	Py_Ret ret = get_all_project(email, token);
-	if (ret.status != 0) cout << "ERROR" << ret.str << endl;
+	if (ret.status != 0) Trace << "ERROR" << ret.str << endl;
 	else {
 		char* result = (char*)ret.str.c_str();
-		cout << result << endl;
+		Trace << result << endl;
 		Json::Value vvv;
 		if (json_parse(result, vvv)) {
 			Json::Value root;
 			root.clear();
 			json_parse(vvv["Protein"].asCString(), root);
-			cout << root << endl;
+			Trace << root << endl;
 			for (uint i = 0; i < root.size(); ++i) {
 				Proj proj;
 				proj.name = root[i]["name"].asCString();

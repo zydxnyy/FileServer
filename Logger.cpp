@@ -27,11 +27,11 @@ std::string Logger::getCurrentTime()
 Logger::Logger():m_file("/home/webadmin/projects/linuxServer/logs/FileServer.log", ios::out | ios::binary | ios::app)
 {
 	if (!m_file) {
-		cout << "Logger open failed..." << endl;
+		Trace << "Logger open failed..." << endl;
 		exit(-1);
 	}
 	else {
-		cout << "Logger opened" << endl;
+		Trace << "Logger opened" << endl;
 		log("Opened", INFO);
 	}
 }

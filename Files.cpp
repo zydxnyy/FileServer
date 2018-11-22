@@ -6,7 +6,7 @@ const int MAX_SQL_LEN = 1024;
 Files::Files()
 {
 	if (!db.initDB(host.c_str(), user.c_str(), pwd.c_str(), db_name.c_str())) {
-		cout << "DB connection failed ..." << endl;
+		Trace << "DB connection failed ..." << endl;
 		exit(-1);
 	}
 }
@@ -20,14 +20,14 @@ Files::~Files()
 bool Files::insertFile(string type, string email, string filename, size_t filesize, string path, string fileHash, int status, size_t offset, int projId) {
 	time_t uploadtime = time(NULL);
 	if (filename.empty()) {
-		cout << "Filename is empty" << endl;
+		Trace << "Filename is empty" << endl;
 		return false;
 	}
 	char sql[MAX_SQL_LEN];
 	sprintf(sql, "insert into dms_files (type, email, filename, filesize, created,filepath, fileHash, status, offset, projname_id) \
 	values('%s', '%s', '%s', %lld, %lld, '%s', '%s', %d, %lld, %d);", type.c_str(), email.c_str(), filename.c_str(),
 		filesize, uploadtime, path.c_str(), fileHash.c_str(), status, offset, projId);
-	//cout << "Sql = " << sql << endl;
+	//Trace << "Sql = " << sql << endl;
 	return db.execSQL(sql);
 }
 
@@ -42,7 +42,7 @@ bool Files::update(string type, int projId, string filename, int state, size_t o
 	if (filename.empty()) return false;
 	char sql[MAX_SQL_LEN];
 	sprintf(sql, "update dms_files set status=%d, offset=%lld, created=%lld where type='%s' and projname_id = %d and filename='%s';", state, offset, time(NULL), type.c_str(), projId, filename.c_str());
-	//cout << "SQl = " << sql << endl;
+	//Trace << "SQl = " << sql << endl;
 	return db.execSQL(sql);
 }
 
@@ -72,7 +72,7 @@ myfile Files::queryFile(string type, int projId, string filename) {
 	sprintf(sql, "select * from dms_files where type='%s' and projname_id = %d and filename='%s';", type.c_str(), projId, filename.c_str());
 	MYSQL_RES* result = db.querySQL(sql);
 	if (!result) {
-		cout << "Query fail" << endl;
+		Trace << "Query fail" << endl;
 		return myfile();
 	}
 	for (int i = 0; i < mysql_num_rows(result); ++i)

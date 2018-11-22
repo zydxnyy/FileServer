@@ -8,11 +8,6 @@
 #include "md5.h"
 using namespace std;
 
-#ifndef TRACE
-#define cout 0 && cout
-#else
-#define cout cout
-#endif
 
 int main()
 {
@@ -20,7 +15,7 @@ int main()
 	//PyEval_InitThreads();
 	//pFunc_init();
 	//PyEval_ReleaseThread(PyThreadState_Get());
-	cout << "--- FileServer ---" << endl;
+	Trace << "--- FileServer ---" << endl;
 		 
 	FileServer s;
 

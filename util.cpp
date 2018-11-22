@@ -90,7 +90,7 @@ int gSend(UDTSOCKET usock, const char* buf, int size, int) {
 	{
 		if (UDT::ERROR == (ss = UDT::send(usock, buf + ssize, size - ssize, 0)))
 		{
-			cout << "send:" << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "send:" << UDT::getlasterror().getErrorMessage() << endl;
 			return UDT::ERROR;
 		}
 
@@ -107,7 +107,7 @@ int gRecv(UDTSOCKET usock, char * buf, int size, int)
 	{
 		if (UDT::ERROR == (rs = UDT::recv(usock, buf + rsize, size - rsize, 0))) {
 
-			cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
+			Trace << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
 			return UDT::ERROR;
 			break;
 		}

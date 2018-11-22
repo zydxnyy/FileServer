@@ -12,6 +12,13 @@
 #include "md5.h"
 using namespace std;
 
+
+#ifndef TRACE
+#define Trace false && cout
+#else
+#define Trace cout
+#endif
+
 #define SERVER_IP "10.132.100.180"
 //#define SERVER_IP "192.168.135.131"
 #define SERVER_PORT "9091"

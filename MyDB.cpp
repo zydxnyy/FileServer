@@ -6,7 +6,7 @@ MyDB::MyDB() {
 	result = nullptr;
 	if (connection == NULL)
 	{
-		cout << "Error:" << mysql_error(connection);
+		Trace << "Error:" << mysql_error(connection);
 		exit(1);
 	}
 }
@@ -29,12 +29,12 @@ bool MyDB::initDB(string host, string user, string pwd, string db_name) {
 		user.c_str(), pwd.c_str(), db_name.c_str(), 0, NULL, 0);
 	if (connection == NULL)
 	{
-		cout << "Error:" << mysql_error(connection);
+		Trace << "Error:" << mysql_error(connection);
 		logger->log(mysql_error(connection), ERROR);
 		exit(1);
 	}
 	if (!execSQL("SET NAMES 'utf8';")) {
-		cout << "Set utf8 failed" << endl;
+		Trace << "Set utf8 failed" << endl;
 		logger->log("Set utf8 failed", ERROR);
 	}
 	return true;
@@ -44,7 +44,7 @@ bool MyDB::execSQL(string sql) {
 	// mysql_query()执行成功返回0，失败返回非0值。与PHP中不一样
 	if (mysql_query(connection, sql.c_str()))
 	{
-		cout << "Query Error:" << mysql_error(connection);
+		Trace << "Query Error:" << mysql_error(connection);
 		logger->log(mysql_error(connection), ERROR);
 		return false;
 	}
@@ -59,7 +59,7 @@ MYSQL_RES* MyDB::querySQL(string sql) {
 	// mysql_query()执行成功返回0，失败返回非0值。与PHP中不一样
 	if (mysql_query(connection, sql.c_str()))
 	{
-		cout << "Query Error:" << mysql_error(connection);
+		Trace << "Query Error:" << mysql_error(connection);
 		logger->log(mysql_error(connection), ERROR);
 		return nullptr;
 	}

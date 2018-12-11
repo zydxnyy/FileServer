@@ -7,7 +7,7 @@
 #include "util.h"
 using namespace std;
 
-static string host = "localhost", user = "root", pwd = "zhf123456", db_name = "ddix_test3";
+static string host = "localhost", user = "root", pwd = "zhf123456", db_name = "ddix_test4";
 //static string host = "localhost", user = "root", pwd = "5288", db_name = "ddix_test3";
 
 struct myfile {

@@ -1,10 +1,11 @@
 #include "FileServer.h"
 using namespace std;
 
-const string ROOTDIR = "/irods/";
+const string ROOTDIR = "/irods2/";
 const string PROTEINDIR = "protein/";
 const string DRUGDIR = "drug/";
 const string ANIMALDIR = "animal/";
+const string METADIR = "metabolomics/";
 
 FileServer::FileServer()
 {
@@ -240,6 +241,32 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 			root.append(sproj);
 		}
 		rrrrr["Animal"] = root;
+		root.clear();
+		//获取Metabolomics项目
+		for (int i = 0; i < projects[3].size(); ++i) {
+			string projname = projects[2].at(i).name;
+			Json::Value sproj;
+			vector<myfile> files = f.queryProject("Metabolomics", getProjId(projname));
+			sproj["name"] = projects[2].at(i).name;
+			sproj["user"] = projects[2].at(i).uid;
+			Json::Value pdata;
+			pdata["data"].resize(0);
+
+			for (int j = 0; j < files.size(); ++j) {
+				if (files.at(j).status != 1) continue;
+				Json::Value sfile;
+				sfile["name"] = files.at(j).filename;
+				sfile["size"] = (double)files.at(j).filesize;
+				sfile["email"] = files.at(j).email;
+				sfile["created"] = (double)files.at(j).uploadtime;
+				sfile["projname"] = getProjName(files.at(j).projId);
+				sfile["fileHash"] = files.at(j).fileHash;
+				pdata["data"].append(sfile);
+			}
+			sproj["pdata"] = pdata;
+			root.append(sproj);
+		}
+		rrrrr["Metabolomics"] = root;
 
 		string jsonProjStr;
 		json_write(jsonProjStr, rrrrr);
@@ -268,6 +295,7 @@ void FileServer::work_thread(UDTSOCKET fhandle, string clienthost, string client
 		if (string(msg.type) == "Protein") typeDir = PROTEINDIR;
 		else if (string(msg.type) == "Drug") typeDir = DRUGDIR;
 		else if (string(msg.type) == "Animal") typeDir = ANIMALDIR;
+		else if (string(msg.type) == "Metabolomics") typeDir = METADIR;
 
 		string dir = typeDir + string(msg.project_name) + "/";
 		Trace << "Dir = " << dir << endl;
@@ -553,6 +581,7 @@ vector<vector<Proj> > FileServer::getProjects(const string& email, const string&
 	vector<Proj> proteinProjects;
 	vector<Proj> drugProjects;
 	vector<Proj> animalProjects;
+	vector<Proj> metaProjects;
 	vector<vector<Proj> > retv;
 	Py_Ret ret = get_all_project(email, token);
 	if (ret.status != 0) Trace << "ERROR" << ret.str << endl;
@@ -587,9 +616,18 @@ vector<vector<Proj> > FileServer::getProjects(const string& email, const string&
 				proj.uid = root[i]["user"].asInt();
 				animalProjects.push_back(proj);
 			}
+			root.clear();
+			json_parse(vvv["Metabolomics"].asCString(), root);
+			for (uint i = 0; i < root.size(); ++i) {
+				Proj proj;
+				proj.name = root[i]["name"].asCString();
+				proj.uid = root[i]["user"].asInt();
+				metaProjects.push_back(proj);
+			}
 			retv.push_back(proteinProjects);
 			retv.push_back(drugProjects);
 			retv.push_back(animalProjects);
+			retv.push_back(metaProjects);
 		}
 	}
 	return retv;
